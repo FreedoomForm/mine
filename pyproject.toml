@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "biocuda"
+version = "39.1.0"
+description = "Adaptive GPU optimization system for bioinformatics kernels"
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [{name = "BioCUDA", email = "biocuda@system.ai"}]
+license = {text = "MIT"}
+keywords = ["cuda", "gpu", "bioinformatics", "autotuning", "smith-waterman", "tensor-cores"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+  "Topic :: Scientific/Engineering :: Bio-Informatics",
+  "Topic :: System :: Hardware",
+]
+dependencies = []
+
+[project.optional-dependencies]
+gpu = ["cupy-cuda12x>=13.0; platform_system == 'Linux'", "torch>=2.2"]
+dev = []
+
+[project.scripts]
+biocuda = "biocuda.cli:main"
+
+[tool.setuptools]
+packages = ["biocuda"]
