@@ -74,3 +74,40 @@ biocuda autotune smith-waterman --seq-len-a 4096 --seq-len-b 4096 --rounds 50 --
 ## License
 
 MIT — see `LICENSE`.
+
+## v39.3 update — per-GPU kernels + real `mma.sync` τ_TC calibration
+
+This release ships **10 specialized kernel modules**, one per supported GPU,
+under `biocuda/kernels/`. Each module hard-codes the right `-arch=sm_XX`
+NVRTC option, the right MMA shape for its tensor-core generation, and (for
+Hopper) DPX-accelerated SW. Selection is automatic based on the detected
+device.
+
+| key | sm_XX | tc gen | mma shape | DPX |
+|---|---|---|---|---|
+| V100 | sm_70 | volta | (8,8,4) | ❌ |
+| T4 | sm_75 | turing | (16,8,8) | ❌ |
+| A100 | sm_80 | ampere | (16,8,16) | ❌ |
+| A10 | sm_86 | ampere | (16,8,16) | ❌ |
+| RTX3090 | sm_86 | ampere | (16,8,16) | ❌ |
+| L4 | sm_89 | ada | (16,8,16) | ❌ |
+| L40 | sm_89 | ada | (16,8,16) | ❌ |
+| RTX4090 | sm_89 | ada | (16,8,16) | ❌ |
+| H100_SXM5 | sm_90a | hopper | (16,8,16) | ✅ |
+| H100_PCIE | sm_90a | hopper | (16,8,16) | ✅ |
+
+### τ_TC calibration via PTX inline asm
+
+`biocuda/kernels/dispatch.py::calibrate_tau_tc` compiles a kernel that
+brackets a chain of `mma.sync.aligned.mNNnNNkNN.row.col.f32.f16.f16.f32`
+instructions between two `clock64()` reads. The host divides the median
+cycle delta by chain length to obtain τ_TC (cycles per MMA), then derives
+estimated peak TFLOPS using the device clock and SM count. Tier M test M5
+compares this to the vendor figure.
+
+### Tier M without MPS / Nsight
+
+`biocuda/tier_m.py` provides MPS-free model-based tests: M1 Kendall τ on
+Ψ_HW vs roofline, M2 Hill R², M3 EXP3 regret bound, M4 occupancy error
+(stream-pair probe), M5 τ_TC vs vendor TFLOPS. All five are integrated in
+the notebook and pass.
